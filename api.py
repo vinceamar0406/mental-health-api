@@ -12,17 +12,17 @@ model_name = "vincentbaldon2003/mental-health-distilbert"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-# Class labels (you may need to update this depending on your model output)
-class_labels = {
-    0: "Anxiety",
-    1: "Depression",
-    2: "PTSD",
-    3: "Stress-Related Disorder",
-    4: "Substance Use Disorder",
-    5: "Eating Disorder",
-    6: "Self-Harm Challenges",
-    7: "Attention Issues"
-}
+# Class labels (directly from your dataset)
+prediction_condition_labels = [
+    "Normal",
+    "Depression",
+    "Suicidal",
+    "Anxiety",
+    "Gibberish",
+    "Bipolar",
+    "Stress",
+    "Personality disorder"
+]
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -46,13 +46,22 @@ def predict():
             outputs = model(**inputs)
             logits = outputs.logits
 
-        # Get the predicted class and the confidence score
-        predicted_class_id = torch.argmax(logits, dim=-1).item()
-        predicted_condition = class_labels.get(predicted_class_id, "Unknown Condition")
+        # Get the top 3 predicted classes and their confidence scores
+        top_k = 3
+        probs = torch.softmax(logits, dim=-1)
+        top_k_values, top_k_indices = torch.topk(probs, top_k, dim=-1)
+
+        # Get the top 3 predicted conditions and their confidence scores
+        top_3_predictions = [
+            {
+                "predicted_condition": prediction_condition_labels[idx.item()],
+                "confidence_score": round(prob.item() * 100, 2)
+            }
+            for idx, prob in zip(top_k_indices[0], top_k_values[0])
+        ]
 
         return jsonify({
-            "predicted_condition": predicted_condition,
-            "confidence_score": round(torch.softmax(logits, dim=-1)[0][predicted_class_id].item() * 100, 2)
+            "top_3_predictions": top_3_predictions
         })
 
     except Exception as e:
