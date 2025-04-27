@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # Define the model directory
-model_name = "vincentbaldon2003/mental-health-distilbert"
+model_name = "vincentbaldon2003/mental-health-distilbert-2"
 
 # Load tokenizer and model from Hugging Face Model Hub
 tokenizer = AutoTokenizer.from_pretrained(model_name)
