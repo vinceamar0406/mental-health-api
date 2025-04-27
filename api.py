@@ -18,7 +18,6 @@ prediction_condition_labels = [
     "Depression",
     "Suicidal",
     "Anxiety",
-    "Gibberish",
     "Bipolar",
     "Stress",
     "Personality disorder"
