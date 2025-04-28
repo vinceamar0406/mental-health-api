@@ -13,7 +13,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
 # Class labels (directly from your dataset)
-prediction_condition_labels = [
+status_labels = [
     "Normal",
     "Depression",
     "Suicidal",
@@ -45,15 +45,15 @@ def predict():
             outputs = model(**inputs)
             logits = outputs.logits
 
-        # Get the top 3 predicted classes and their confidence scores
+        # Get the top 3 predictions and their confidence scores
         top_k = 3
         probs = torch.softmax(logits, dim=-1)
         top_k_values, top_k_indices = torch.topk(probs, top_k, dim=-1)
 
-        # Get the top 3 predicted conditions and their confidence scores
+        # Get the top 3 predicted status and their confidence scores
         top_3_predictions = [
             {
-                "predicted_condition": prediction_condition_labels[idx.item()],
+                "status": status_labels[idx.item()],
                 "confidence_score": round(prob.item() * 100, 2)
             }
             for idx, prob in zip(top_k_indices[0], top_k_values[0])
