@@ -5,14 +5,12 @@ import os
 
 app = Flask(__name__)
 
-# Define the model directory
+# Model and tokenizer setup
 model_name = "vincentbaldon2003/mental-health-distilbert-2"
-
-# Load tokenizer and model from Hugging Face Model Hub
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-# Class labels (directly from your dataset)
+# Class labels matching your dataset
 status_labels = [
     "Normal",
     "Depression",
@@ -26,31 +24,35 @@ status_labels = [
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        # Get JSON data from the request
         data = request.json
         responses = data.get("responses", [])
 
-        # Ensure there are at least 5 responses
+        # Validate that at least 5 responses exist
         if not responses or len(responses) < 5:
             return jsonify({"error": "Invalid input. Expected at least 5 responses."}), 400
 
-        # Combine responses into one text input
+        # Merge responses into a single string
         combined_text = " ".join(responses)
 
-        # Tokenize the combined text
-        inputs = tokenizer(combined_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        # Tokenize
+        inputs = tokenizer(
+            combined_text,
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            max_length=512
+        )
 
-        # Make prediction
+        # Predict
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
 
-        # Get the top 3 predictions and their confidence scores
-        top_k = 3
+        # Top 3 predictions
         probs = torch.softmax(logits, dim=-1)
-        top_k_values, top_k_indices = torch.topk(probs, top_k, dim=-1)
+        top_k_values, top_k_indices = torch.topk(probs, 3, dim=-1)
 
-        # Get the top 3 predicted status and their confidence scores
+        # Format top 3 into a list of dictionaries
         top_3_predictions = [
             {
                 "status": status_labels[idx.item()],
@@ -59,6 +61,7 @@ def predict():
             for idx, prob in zip(top_k_indices[0], top_k_values[0])
         ]
 
+        # Return the top 3 predictions
         return jsonify({
             "top_3_predictions": top_3_predictions
         })
@@ -67,6 +70,5 @@ def predict():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    # For platforms like Render (port 5000)
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=False)
