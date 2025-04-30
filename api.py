@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # Model and tokenizer setup
-model_name = "vincentbaldon2003/mental-health-distilbert-2"
+model_name = "vincentbaldon2003/mental-health-distilbert"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
@@ -48,22 +48,16 @@ def predict():
             outputs = model(**inputs)
             logits = outputs.logits
 
-        # Top 3 predictions
+        # Get the top (most confident) prediction
         probs = torch.softmax(logits, dim=-1)
-        top_k_values, top_k_indices = torch.topk(probs, 3, dim=-1)
+        top_pred_index = torch.argmax(probs, dim=-1).item()
+        predicted_condition = status_labels[top_pred_index]
+        confidence_score = round(probs[0][top_pred_index].item() * 100, 2)
 
-        # Format top 3 into a list of dictionaries
-        top_3_predictions = [
-            {
-                "status": status_labels[idx.item()],
-                "confidence_score": round(prob.item() * 100, 2)
-            }
-            for idx, prob in zip(top_k_indices[0], top_k_values[0])
-        ]
-
-        # Return the top 3 predictions
+        # Return only the top prediction in the format Laravel expects
         return jsonify({
-            "top_3_predictions": top_3_predictions
+            "predicted_condition": predicted_condition,
+            "confidence_score": confidence_score
         })
 
     except Exception as e:
